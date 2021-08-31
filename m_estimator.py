@@ -2,7 +2,6 @@
 import numpy as np
 import scipy as sc
 
-
 def eigsorted(cov):
     """
     Find and sort Eigenvalues and vectors
@@ -13,7 +12,6 @@ def eigsorted(cov):
     vals, vecs = np.linalg.eigh(cov)
     order = vals.argsort()[::-1]
     return vals[order], vecs[:, order]
-
 
 def u_func(mahalanobis_dist, huber_denom, c_square):
     """
@@ -28,7 +26,6 @@ def u_func(mahalanobis_dist, huber_denom, c_square):
         return 1./huber_denom
     else:
         return c_square/(mahalanobis_dist*huber_denom)
-
 
 def mean_update(data, mean, sigma_inv, huber_denom, c_square):
     """
@@ -56,7 +53,6 @@ def mean_update(data, mean, sigma_inv, huber_denom, c_square):
 
     return mean_hat
 
-
 def sigma_update(data, mean, sigma_inv, huber_denom, c_square):
     """
     Update sigma estimate
@@ -67,7 +63,6 @@ def sigma_update(data, mean, sigma_inv, huber_denom, c_square):
     :param c_square: A constant in num_features and quantile (trade-off variable)
     :return: New sigma
     """
-
     num_samples, num_features = data.shape
     sigma_hat = np.zeros((num_features,num_features))
 
@@ -75,7 +70,6 @@ def sigma_update(data, mean, sigma_inv, huber_denom, c_square):
         sigma_hat += 1./num_samples*u_func(mahalanobis_dist=np.dot(np.dot(data[z] - mean, sigma_inv), data[z] - mean), huber_denom=huber_denom, c_square=c_square)*np.outer(data[z]- mean, data[z]- mean)
 
     return sigma_hat
-
 
 def robust_mean_covariance(data, quantile=.85):
     """
@@ -117,41 +111,7 @@ def robust_mean_covariance(data, quantile=.85):
                 np.sum(np.sum(np.abs(M_est_sigma_new - M_est_sigma_old)))
 
         iteration += 1
-        if iteration == 999 and s_a_c > 1:
-            print('Max number of iterations reached for m estimation. Last s_a_c: {}.'.format(s_a_c))
-            print('It is advised to have at least 120 positive trials in robust calibration.')
+        if iteration > 999 and s_a_c > 1:
+            break
 
     return M_est_mean_new, M_est_sigma_new
-
-
-def robust_mean_scalar(data):
-    # M estimator with Huber's loss from summer school Zoubir's slides.
-
-    # Scale, median absolute deviation
-    sigma_mad = 1.483*np.median(np.abs(data - np.median(data)))
-    mean = np.mean(data)
-    median = np.median(data)
-    mu = np.median(data)
-    mu_prev = mu + sigma_mad
-
-    weights = np.zeros(data.size)
-
-    while np.abs(mu - mu_prev)/sigma_mad > .1**5:
-
-        mu_prev = mu
-
-        mu = 0
-        for i, sample in enumerate(data):
-
-            temp = (sample - mu_prev)/sigma_mad
-
-            if np.abs(temp) < 1.34:
-                weights[i] = 1
-            else:
-                weights[i] = 1.34/np.abs(temp)
-
-            mu += weights[i]*sample
-
-        mu /= np.sum(weights)
-
-    return mu
